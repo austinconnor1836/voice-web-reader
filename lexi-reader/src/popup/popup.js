@@ -1,57 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
     const playPauseBtn = document.getElementById('playPauseBtn');
     const stopBtn = document.getElementById('stopBtn');
-    const muteBtn = document.getElementById('muteBtn');
     const voiceSelect = document.getElementById('voiceSelect');
     const rateRange = document.getElementById('rateRange');
     const rateValue = document.getElementById('rateValue');
 
     let isPlaying = false;
-    let isMuted = false;
 
     // Load saved settings
-    chrome.storage.sync.get(['rate', 'voiceURI', 'volume'], (data) => {
+    chrome.storage.sync.get(['rate', 'voiceURI'], (data) => {
         if (data.rate) {
             rateRange.value = data.rate;
             rateValue.textContent = data.rate;
         }
-        if (data.volume !== undefined) {
-            isMuted = data.volume === 0;
-            updateMuteButton();
-        }
         // Voice restoring happens after voices load
     });
-
-    // ... (voices logic) ...
-
-    // Event Listeners
-    // ... (play/stop listeners) ...
-
-    muteBtn.addEventListener('click', () => {
-        isMuted = !isMuted;
-        updateMuteButton();
-        saveSettings();
-        // Send live update
-        sendMessageToContent({
-            action: 'updateSettings',
-            settings: getSettings()
-        });
-    });
-
-    // Helper functions
-    function getSettings() {
-        return {
-            voiceURI: voiceSelect.value,
-            rate: parseFloat(rateRange.value),
-            volume: isMuted ? 0 : 1
-        };
-    }
-
-    function updateMuteButton() {
-        muteBtn.innerHTML = isMuted ? '<span class="icon">🔇</span>' : '<span class="icon">🔊</span>';
-    }
-
-    // ... (rest of file) ...
 
     // Populate voices
     function populateVoices() {
@@ -103,7 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    voiceSelect.addEventListener('change', saveSettings);
+    voiceSelect.addEventListener('change', () => {
+        saveSettings();
+        // Send live update
+        sendMessageToContent({
+            action: 'updateSettings',
+            settings: getSettings()
+        });
+    });
 
     // Helper functions
     function getSettings() {

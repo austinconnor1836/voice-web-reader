@@ -24,19 +24,24 @@
             stopReading();
         } else if (request.action === 'updateSettings') {
             if (request.settings) {
+                const oldSettings = readingState.settings;
                 readingState.settings = request.settings;
-                // If currently speaking, we need to restart the current sentence to apply the new rate
+
+                // Only restart if Voice or Rate changed.
                 if (readingState.isReading && !readingState.isPaused) {
-                    // Prevent onend/onerror from firing and skipping to next sentence
-                    if (readingState.utterance) {
-                        readingState.utterance.onend = null;
-                        readingState.utterance.onerror = null;
+                    if (oldSettings.voiceURI !== request.settings.voiceURI || oldSettings.rate !== request.settings.rate) {
+                        // Prevent onend/onerror from firing and skipping to next sentence
+                        if (readingState.utterance) {
+                            readingState.utterance.onend = null;
+                            readingState.utterance.onerror = null;
+                        }
+                        window.speechSynthesis.cancel();
+                        speakNextSentence();
                     }
-                    window.speechSynthesis.cancel();
-                    speakNextSentence();
                 }
             }
         }
+        senderResponse({ status: 'ok' });
     });
 
     function cleanText(text) {
@@ -276,7 +281,6 @@
         // Speak
         const utterance = new SpeechSynthesisUtterance(item.text);
         utterance.rate = readingState.settings.rate || 1.0;
-        utterance.volume = readingState.settings.volume !== undefined ? readingState.settings.volume : 1.0;
 
         if (readingState.settings.voiceURI) {
             // Try getting voices again if empty (paranoia)
@@ -311,6 +315,10 @@
     }
 
     function stopReading() {
+        if (readingState.utterance) {
+            readingState.utterance.onend = null;
+            readingState.utterance.onerror = null;
+        }
         window.speechSynthesis.cancel();
         readingState.isReading = false;
         readingState.isPaused = false;
