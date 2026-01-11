@@ -1,0 +1,14 @@
+.lexi-highlight {
+    background-color: #fde047 !important;
+    /* Yellow-400 equivalent */
+    color: #000000 !important;
+    border-radius: 2px;
+    box-shadow: 0 0 0 2px #fde047;
+    transition: background-color 0.2s;
+}
+
+.lexi-highlight-current {
+    background-color: #fbbf24 !important;
+    /* Amber-400 */
+    box-shadow: 0 0 0 2px #fbbf24;
+}
