@@ -283,9 +283,17 @@
         utterance.rate = readingState.settings.rate || 1.0;
 
         if (readingState.settings.voiceURI) {
-            // Try getting voices again if empty (paranoia)
+            // Try getting voices again (paranoia)
             if (availableVoices.length === 0) loadVoices();
-            const voice = availableVoices.find(v => v.voiceURI === readingState.settings.voiceURI);
+            // Even if we have some, try fresh if not found?
+            let voice = availableVoices.find(v => v.voiceURI === readingState.settings.voiceURI);
+
+            // Should usually find it. If not, try refreshing one last time.
+            if (!voice) {
+                loadVoices();
+                voice = availableVoices.find(v => v.voiceURI === readingState.settings.voiceURI);
+            }
+
             if (voice) utterance.voice = voice;
         }
 
@@ -330,13 +338,19 @@
     window.addEventListener('beforeunload', stopReading);
 
     // Fix: Ensure voices are available (Chrome requires this primarily)
+    // Fix: Ensure voices are available (Chrome requires this primarily)
     let availableVoices = [];
     function loadVoices() {
-        availableVoices = window.speechSynthesis.getVoices();
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            availableVoices = voices;
+        }
     }
+
+    // Initialize voices
     loadVoices();
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = loadVoices;
+        window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
     }
 
     function startReading() {
