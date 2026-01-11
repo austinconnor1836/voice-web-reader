@@ -1,39 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lexi Reader</title>
-  <link rel="stylesheet" href="popup.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <h1>Lexi</h1>
-      <div class="status-indicator" id="statusIndicator"></div>
-    </header>
-    
-    <div class="controls">
-      <button id="playPauseBtn" class="primary-btn" aria-label="Play or Pause">
-        <span class="icon">▶</span> Play
-      </button>
-      <button id="stopBtn" class="secondary-btn" aria-label="Stop">
-        <span class="icon">■</span>
-      </button>
-    </div>
 
-    <div class="settings">
-      <div class="setting-group">
-        <label for="voiceSelect">Voice</label>
-        <select id="voiceSelect"></select>
-      </div>
-      
-      <div class="setting-group">
-        <label for="rateRange">Speed: <span id="rateValue">1.0</span>x</label>
-        <input type="range" id="rateRange" min="0.5" max="3.0" step="0.1" value="1.0">
-      </div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lexi Reader</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Lexi</h1>
+            <div class="status-indicator" id="statusIndicator"></div>
+        </header>
+
+        <p class="instruction">
+            Tip: Highlight text to start reading from there!
+        </p>
+
+        <div class="controls">
+            <button id="playPauseBtn" class="primary-btn" aria-label="Play or Pause">
+                <span class="icon">▶</span> Play
+            </button>
+            <button id="stopBtn" class="secondary-btn" aria-label="Stop">
+                <span class="icon">■</span>
+            </button>
+            <button id="muteBtn" class="secondary-btn" aria-label="Mute">
+                <span class="icon">🔊</span>
+            </button>
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label for="voiceSelect">Voice</label>
+                <select id="voiceSelect"></select>
+            </div>
+
+            <div class="setting-group">
+                <label for="rateRange">Speed: <span id="rateValue">1.0</span>x</label>
+                <input type="range" id="rateRange" min="0.5" max="3.0" step="0.1" value="1.0">
+            </div>
+        </div>
     </div>
-  </div>
-  <script src="popup.js"></script>
+    <script src="popup.js"></script>
 </body>
+
 </html>

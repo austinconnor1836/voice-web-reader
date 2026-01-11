@@ -276,8 +276,12 @@
         // Speak
         const utterance = new SpeechSynthesisUtterance(item.text);
         utterance.rate = readingState.settings.rate || 1.0;
+        utterance.volume = readingState.settings.volume !== undefined ? readingState.settings.volume : 1.0;
+
         if (readingState.settings.voiceURI) {
-            const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === readingState.settings.voiceURI);
+            // Try getting voices again if empty (paranoia)
+            if (availableVoices.length === 0) loadVoices();
+            const voice = availableVoices.find(v => v.voiceURI === readingState.settings.voiceURI);
             if (voice) utterance.voice = voice;
         }
 
@@ -314,13 +318,82 @@
         document.querySelectorAll('.lexi-highlight').forEach(el => el.classList.remove('lexi-highlight'));
     }
 
-    // Init Logic on load is risky if content is dynamic, but requested by user for highlight-to-start
-    // We can delay it or run it.
-    // Let's run it.
-    if (document.readyState === 'complete') {
-        setTimeout(processContent, 1000); // Slight delay for safety
-    } else {
-        window.addEventListener('load', () => setTimeout(processContent, 1000));
+    // Fix: Stop reading when the page is closed/refreshed
+    window.addEventListener('beforeunload', stopReading);
+
+    // Fix: Ensure voices are available (Chrome requires this primarily)
+    let availableVoices = [];
+    function loadVoices() {
+        availableVoices = window.speechSynthesis.getVoices();
     }
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    function startReading() {
+        // Fix: Capture selection BEFORE processing content if content hasn't been processed
+        // But since we are removing the timeout, content *should* be processed.
+        // However, dynamic pages might still be an issue.
+        // Robust Strategy: 
+        // 1. If selection exists, identify the text.
+        // 2. Process content.
+        // 3. Find sentence matching text/node.
+
+        // Capture precall selection
+        let selectedNode = null;
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0 && !selection.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            selectedNode = range.startContainer;
+            if (selectedNode.nodeType === Node.TEXT_NODE) selectedNode = selectedNode.parentNode;
+        }
+
+        processContent();
+
+        if (readingState.isPaused) {
+            window.speechSynthesis.resume();
+            readingState.isPaused = false;
+            readingState.isReading = true;
+            return;
+        }
+
+        if (readingState.isReading) return;
+
+        // Try to match selection to a sentence
+        if (selectedNode) {
+            // Because processContent might have replaced the node, we need to check if selectedNode
+            // is still in DOM or if established links exist.
+            // If processContent ran *before* selection, selectedNode is likely one of our spans.
+            // If processContent ran *after* (unlikely now we removed timeout), selectedNode is detached.
+
+            // Best effort: Check if selectedNode is a lexi-sentence
+            const index = readingState.sentences.findIndex(s =>
+                s.elements.some(el => el === selectedNode || el.contains(selectedNode) || selectedNode.contains(el))
+            );
+
+            if (index !== -1) {
+                readingState.currentIndex = index;
+                selection.removeAllRanges();
+            }
+        }
+
+        readingState.isReading = true;
+        readingState.isPaused = false;
+        speakNextSentence();
+    }
+
+    // ... (rest of functions) ...
+
+    // Fix: Run immediately on load to ensure DOM is ready for selection
+    // Removing the 1000ms delay to prevent race conditions where user selects text before processing
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', processContent);
+    } else {
+        processContent();
+    }
+
+    // Optional: Watch for dynamic content changes? 
+    // integrating a simple mutation observer for stability could help, but kept simple for now.
 
 })();

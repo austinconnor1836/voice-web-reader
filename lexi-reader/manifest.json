@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Lexi - Voice Web Reader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Reads web pages aloud with sentence-level highlighting.",
   "permissions": [
     "activeTab",
@@ -13,18 +13,29 @@
   ],
   "action": {
     "default_popup": "src/popup/popup.html",
-    "default_title": "Lexi Reader"
+    "default_title": "Lexi Reader",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["src/content/content.js"],
-      "css": ["src/content/styles.css"]
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content/content.js"
+      ],
+      "css": [
+        "src/content/styles.css"
+      ]
     }
   ],
   "icons": {
-    "16": "assets/icon16.png",
-    "48": "assets/icon48.png",
-    "128": "assets/icon128.png"
+    "16": "./icons/icon16.png",
+    "48": "./icons/icon48.png",
+    "128": "./icons/icon128.png"
   }
 }
