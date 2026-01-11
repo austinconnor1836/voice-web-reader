@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Lexi - Voice Web Reader",
+  "name": "Highlight Voice Reader",
   "version": "1.0.1",
   "description": "Reads web pages aloud with sentence-level highlighting.",
   "permissions": [

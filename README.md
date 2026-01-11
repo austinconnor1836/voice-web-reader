@@ -1,4 +1,4 @@
-# Lexi - Voice Web Reader
+# Highlight Voice Reader
 
 A powerful Chrome extension that reads web pages aloud with sentence-level highlighting. Lexi uses the native Web Speech API to provide a smooth text-to-speech experience completely free of charge.
 

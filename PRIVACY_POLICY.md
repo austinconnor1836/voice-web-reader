@@ -1,4 +1,4 @@
-# Privacy Policy for Lexi - Voice Web Reader
+# Privacy Policy for Highlight Voice Reader
 
 **Last updated: January 2026**
 
