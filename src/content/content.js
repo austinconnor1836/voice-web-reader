@@ -67,29 +67,39 @@
         const nodes = getReadableNodes();
         const segmenter = new Intl.Segmenter(navigator.language, { granularity: 'sentence' });
 
+        // Store sentences temporarily by ID so we can re-order them later
+        const sentenceMap = new Map();
+        let globalSentenceCounter = 0;
+
         // Reverse to process deepest children first (bottom-up)
         // This prevents container divs from swallowing up semantic children like <p> tags
         nodes.reverse().forEach(node => {
             if (node.classList.contains('lexi-processed')) return;
-            // Check if node has direct text or is a leaf-like block to avoid double processing
-            // A simple heuristic: if it has significant direct text content, process it.
-            // Or if it's a P/Heading/Li.
-            // For DIVs, we only process if they don't contain other readable block elements we've already selected?
-            // To be safe and simple: just check if it was already processed (via class).
-            // But we need to be careful about nesting.
-            // Better strategy: Process from bottom up? 
-            // Current strategy: We iterate `nodes` which is querySelectorAll.
-            // We'll skip if any ancestor has already been processed? 
-            // Or just check if `node` contains raw text that hasn't been wrapped.
-
-            // Let's rely on the tokenizer. We will build text from *all* text nodes in this block
-            // that are NOT already inside a .lexi-sentence span.
-
-            processNode(node, segmenter);
+            // Pass counter generator or handle ID generation
+            processNode(node, segmenter, sentenceMap, () => `s_${globalSentenceCounter++}`);
         });
+
+        // Rebuild sentences list in correct DOM order (Top-down)
+        // Since we processed bottom-up, the original array was reversed.
+        // Querying the DOM for our injected spans guarantees correct visual order.
+        const orderedSentences = [];
+        const seenIds = new Set();
+
+        document.querySelectorAll('.lexi-sentence').forEach(span => {
+            const id = span.dataset.lexiId;
+            if (id && !seenIds.has(id)) {
+                const sentence = sentenceMap.get(id);
+                if (sentence) {
+                    orderedSentences.push(sentence);
+                    seenIds.add(id);
+                }
+            }
+        });
+
+        readingState.sentences = orderedSentences;
     }
 
-    function processNode(node, segmenter) {
+    function processNode(node, segmenter, sentenceMap, generateId) {
         // Gather all valid text nodes in this block
         const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
         const textNodes = [];
@@ -113,24 +123,17 @@
         if (textNodes.length === 0) return;
 
         // PRE-PROCESSING: Normalize whitespace in DOM nodes
-        // This ensures the segmenter sees clean text and prevents newlines/tabs from acting as splitters
         textNodes.forEach(tNode => {
-            // Replace newlines and multiple spaces with a single space
-            // We modify the DOM node directly so our offsets stay valid for the new content
             const oldText = tNode.textContent;
             const newText = oldText.replace(/\s+/g, ' ');
-
-            // Only update if changed to avoid layout thrashing irrelevant nodes
             if (oldText !== newText) {
                 tNode.textContent = newText;
             }
         });
 
-        // Concatenate text to form the full "sentence-able" string
-        // We map ranges of the full string back to (Node, StartIndex, EndIndex)
+        // Concatenate text
         let fullText = "";
-        const nodeMap = []; // { node: TextNode, start: int, end: int }
-
+        const nodeMap = [];
         textNodes.forEach(tNode => {
             const start = fullText.length;
             fullText += tNode.textContent;
@@ -142,31 +145,30 @@
 
         const segments = Array.from(segmenter.segment(fullText));
 
-        // Mark node as processed so we don't do it again
+        // Mark node as processed
         node.classList.add('lexi-processed');
 
-        // Let's execute the NEW PLAN (Group by Text Node)
-        // Map: TextNode -> [ { start, end, sentenceId } ]
-        const nodeInstructions = new Map(); // Key: TextNode, Value: Array of pieces
+        const nodeInstructions = new Map();
 
         // Create sentence objects first
-        const sentenceObjects = segments.map((seg, index) => {
-            // Filter empty ones
-            if (cleanText(seg.segment).length === 0) return null;
-            return {
-                id: Symbol('sentence_' + index),
+        let currentSenIdx = 0;
+        const sentenceObjects = [];
+
+        segments.forEach(seg => {
+            if (cleanText(seg.segment).length === 0) return;
+
+            const id = generateId();
+            const obj = {
+                id: id,
                 text: cleanText(seg.segment),
                 elements: []
             };
-        }).filter(s => s !== null);
+            sentenceObjects.push(obj);
+            sentenceMap.set(id, obj);
+        });
 
-        // Correct loop:
-        let currentSenIdx = 0;
         segments.forEach(segment => {
             if (cleanText(segment.segment).length === 0) {
-                // It's whitespace. We still need to preserve it in the DOM, 
-                // but we don't assign it to a sentence for reading.
-                // We can assign it to a "null" sentence or just text.
                 const segStart = segment.index;
                 const segEnd = segStart + segment.segment.length;
                 distributeToNodes(segStart, segEnd, null, nodeMap, nodeInstructions);
@@ -192,19 +194,16 @@
                     const span = document.createElement('span');
                     span.textContent = textContent;
                     span.className = 'lexi-sentence';
+                    span.dataset.lexiId = part.sentenceObj.id; // Tag with ID
                     part.sentenceObj.elements.push(span);
                     fragment.appendChild(span);
                 } else {
-                    // Whitespace / non-sentence text
                     fragment.appendChild(document.createTextNode(textContent));
                 }
             });
 
             textNode.parentNode.replaceChild(fragment, textNode);
         });
-
-        // Add to global state
-        readingState.sentences.push(...sentenceObjects);
     }
 
     function distributeToNodes(segStart, segEnd, sentenceObj, nodeMap, nodeInstructions) {
